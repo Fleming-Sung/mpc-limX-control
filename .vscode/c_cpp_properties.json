@@ -1,0 +1,31 @@
+{
+    "configurations": [
+        {
+            "browse": {
+                "databaseFilename": "${default}",
+                "limitSymbolsToIncludedHeaders": false
+            },
+            "includePath": [
+                // "/home/fleming/workspace/mpcLimX/devel/include/**",
+                // "/home/fleming/workspace/limx_ws/install/include/**",
+                "/opt/ros/noetic/include/**",
+                // "/home/fleming/workspace/Hector_Simulation/devel/include/**",
+                // "/home/fleming/workspace/Hector_Simulation/src/Hector_ROS_Simulation/hector_control/include/**",
+                "/home/fleming/workspace/mpcLimX/src/pointfoot-gazebo-ros/pointfoot_gazebo/include/**",
+                "/home/fleming/workspace/mpcLimX/src/pointfoot-sdk-lowlevel/include/**",
+                "/home/fleming/workspace/mpcLimX/src/pointfoot-gazebo-ros/pointfoot_sdk_sim/include/**",
+                // "/home/fleming/workspace/Hector_Simulation/src/Hector_ROS_Simulation/unitree_ros/unitree_controller/include/**",
+                // "/home/fleming/workspace/Hector_Simulation/src/Hector_ROS_Simulation/unitree_ros/unitree_legged_control/include/**",
+                "/usr/include/**",
+                // "${workspaceFolder}/include",
+                "./include"
+            ],
+            "name": "ROS",
+            "intelliSenseMode": "gcc-x64",
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "gnu11",
+            "cppStandard": "c++14"
+        }
+    ],
+    "version": 4
+}
