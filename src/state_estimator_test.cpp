@@ -14,17 +14,30 @@ date: Jan 20，2025
 #include "state_estimator_fake.h"
 
 
-int main(int argc, char **argv)
-{   
-
-    // state_estimator.init();
+int main(int argc, char **argv) {
     ros::init(argc, argv, "state_estimator_fake_node");
+    ros::NodeHandle nh;
 
     StateEstimatorFake state_estimator;
 
-    state_estimator.spin();
+    // 创建一个定时器，每 0.5 秒（2Hz）调用一次
+    ros::Rate loop_rate(2);  // 2Hz
 
-    state_estimator.print();
+    while (ros::ok()) {
+        // 获取当前的机器人状态
+        RobotOdomState state = state_estimator.get_state();
+
+        // 打印机器人状态
+        std::cout << "Robot state:" << std::endl;
+        std::cout << "Position: [" << state.pos[0] << ", " << state.pos[1] << ", " << state.pos[2] << "]" << std::endl;
+        std::cout << "Orientation (Euler): [" << state.ori[0] << ", " << state.ori[1] << ", " << state.ori[2] << "]" << std::endl;
+        std::cout << "Linear Velocity: [" << state.v_pos[0] << ", " << state.v_pos[1] << ", " << state.v_pos[2] << "]" << std::endl;
+        std::cout << "Angular Velocity: [" << state.v_ori[0] << ", " << state.v_ori[1] << ", " << state.v_ori[2] << "]" << std::endl;
+
+        // 休眠直到下一个周期
+        ros::spinOnce();
+        loop_rate.sleep();
+    }
 
     return 0;
 }

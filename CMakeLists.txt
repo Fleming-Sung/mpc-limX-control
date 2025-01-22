@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
     roscpp
     geometry_msgs
     gazebo_msgs
+    tf
     std_msgs
     pointfoot_sdk_lowlevel
 )
@@ -20,7 +21,7 @@ find_package(Eigen3 REQUIRED)
 
 catkin_package(
     INCLUDE_DIRS include
-    CATKIN_DEPENDS    roscpp    geometry_msgs  gazebo_msgs  std_msgs  pointfoot_sdk_lowlevel
+    CATKIN_DEPENDS    roscpp    geometry_msgs  gazebo_msgs  tf  std_msgs  pointfoot_sdk_lowlevel
 )
 
 include_directories(
