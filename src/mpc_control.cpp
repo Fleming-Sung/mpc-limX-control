@@ -4,13 +4,12 @@
  * @version 1.0
  * @date 2024-12-9
  *
- * © [2024] Fleming@HIT All rights reserved.
+ * © [2024] Fleming@HIT, All rights reserved.
  * E-mail: fleming.ming.sung@gmail.com
  *
  */
 
 #include "pf_controller_base.h" // Include header file for PFControllerBase class
-// # include <pointfoot_sdk_lowlevel/pf_controller_base.h>
 #include "MPCController.h"
 #include "MPCParam.h"
 
@@ -47,9 +46,7 @@ public:
    */
   void start()
   {
-    std::cout << "Moving to zero point...\n";
     bool reachFlag = false;
-    // MPCParam param;
 
     while (!reachFlag)
     {
@@ -80,6 +77,7 @@ public:
         // Control the joints using PID controllers
         groupJointController(kp, kd, jointPos, targetVel, targetTorque);
         // std::cout << "now q:\t" << robot_state_.q[0] << robot_state_.q[1] << robot_state_.q[2] << robot_state_.q[3] << robot_state_.q[4] << robot_state_.q[5] << std::endl;
+
         // Check if reached the zero point with given error.
         reachFlag = mpc.param.errorTest(targetPos, robot_state_.q);
         
@@ -116,10 +114,14 @@ void run()
     {
       if (robotstate_on_)
       {
-        auto time_point = init_time_point + std::chrono::milliseconds(mpc.param.milliseconds_per_step);
+        std::cout << "MPC is running..." <<< std::endl;
+
+        auto time_point = init_time_point + std::chrono::milliseconds(mpc.param.milliseconds_per_step); // 将控制频率设定为mpc.param.milliseconds_per_step
 
         // begin MPC compute...
-        mpc.run(robot_state_, imu_data_, robot_cmd_, running_iter_); // compute dest torque in robot_cmd.
+        // mpc.run(robot_state_, imu_data_, robot_cmd_, running_iter_); // compute dest torque in robot_cmd.
+
+        std::cout << robot_state_ << std::endl;
 
         // publish control cmd to robot.
         // groupJointController(robot_cmd_.Kp, robot_cmd_.Kd, robot_cmd_.q, robot_cmd_.dq, robot_cmd_.tau);
@@ -170,6 +172,10 @@ int main(int argc, char *argv[])
   {
     exit(1); // Exit program if initialization fails
   }
+
+  // 初始化创建虚拟状态观测器节点（必须在MPCWalking类实例化之前进行）
+  ros::init(argc, argv, "state_estimator_fake_node");
+  ros::NodeHandle nh;
 
   MPCWalking controller; // Create an instance of PFGroupJointMove controller
   controller.init();           // Initialize the controller
