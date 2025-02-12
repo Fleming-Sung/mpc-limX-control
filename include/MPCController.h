@@ -23,14 +23,14 @@ private:
     double phase;              // 当前步态周期中的相位（时间表示，单位为s）
     double remainSwingTime;    // 剩余摆动时间
 
-    void calculateGait(int iter, double gaitTime, int& left_leg_state, int& right_leg_state);
+    void calculateGait(int iter);
     void computeFootPlacement(limxsdk::RobotState state, int leg, Vec3& finalPosition); // 计算摆动腿落脚点
     void computeSwingFootDesiredPosition(int leg, double swingPhase, Vec3& desiredPosition, Vec3& desiredVelocity); // 计算摆动腿期望位置
     void computeJointPositions(Vec3 desiredFootPosition, int leg, limxsdk::RobotCmd& cmd); // 通过逆运动学计算关节期望位置
 };
 
 MPC::MPC() {
-    odmo_state = state_estimator.get_state();
+    odmo_state = estimates.get_state();
 }
 
 // 按固定迈步周期计算当前两条腿分别是支撑状态还是摆动状态，1表示摆动，0表示支撑
@@ -39,7 +39,7 @@ void MPC::calculateGait(int iter) {
     double cycleTime = param.swing_time + param.stance_time; // 完整的步态周期时间
     phase = fmod(currentTime, cycleTime); // 当前步态周期中的相位
 
-    if (phase < swingTime) {
+    if (phase < param.swing_time) {
         left_leg_state = 1; // 左腿摆动，右腿支撑
         right_leg_state = 0;
         remainSwingTime = param.swing_time - phase;
@@ -52,8 +52,10 @@ void MPC::calculateGait(int iter) {
 
 // 根据期望速度和当前位置计算摆动腿下一次落地的落足点位置
 void MPC::computeFootPlacement(limxsdk::RobotState state, int leg, Vec3& finalPosition) {
-    Vec3 currentPosition = vec(odmo_state.pos[0], odmo_state.pos[1], odmo_state.pos[2]);
-    Vec3 currentVelocity = vec(odmo_state.v_pos[0], odmo_state.v_pos[1], odmo_state.v_pos[2]);
+    Vec3 currentPosition;
+    Vec3 currentVelocity;
+    currentPosition << odmo_state.pos[0], odmo_state.pos[1], odmo_state.pos[2];
+    currentVelocity << odmo_state.v_pos[0], odmo_state.v_pos[1], odmo_state.v_pos[2];
 
     //如果保持当前速度运行，摆动腿下一次落地时期望的baselink位置
     Vec3 predictedPosition = currentPosition + currentVelocity * remainSwingTime; 
@@ -63,7 +65,7 @@ void MPC::computeFootPlacement(limxsdk::RobotState state, int leg, Vec3& finalPo
     // 保持当前运动速度产生的偏移及其与期望速度的修正
     double pfx_rel = currentVelocity[0] * 0.5 * param.stance_time; // TODO：未添加期望速度修正  
     double pfy_rel = currentVelocity[1] * 0.5 * param.stance_time;
-
+    // 最大偏移距离的修正
     pfx_rel = fmin(fmax(pfx_rel, -p_rel_max), p_rel_max);
     pfy_rel = fmin(fmax(pfy_rel, -p_rel_max), p_rel_max);
 
@@ -71,7 +73,8 @@ void MPC::computeFootPlacement(limxsdk::RobotState state, int leg, Vec3& finalPo
     predictedPosition[1] += pfy_rel;
     predictedPosition[2] = 0.5;
 
-    // 期望下一个支撑相中间时，摆动腿到达static offset姿态，据此反推出当前摆动腿的落足点位置(世界坐标系下的绝对位置)
+    // 假设下一个支撑相中间时，摆动腿到达static offset姿态；
+    // 根据此时的预测baselink位置(predictedPosition)反推出当前摆动腿的落足点位置(世界坐标系下的绝对位置)
     finalPosition = predictedPosition + param.static_foot_offset;
 }
 

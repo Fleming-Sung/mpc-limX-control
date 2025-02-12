@@ -121,7 +121,7 @@ void run()
         // begin MPC compute...
         // mpc.run(robot_state_, imu_data_, robot_cmd_, running_iter_); // compute dest torque in robot_cmd.
 
-        std::cout << robot_state_ << std::endl;
+        // std::cout << robot_state_ << std::endl;
 
         // publish control cmd to robot.
         // groupJointController(robot_cmd_.Kp, robot_cmd_.Kd, robot_cmd_.q, robot_cmd_.dq, robot_cmd_.tau);
