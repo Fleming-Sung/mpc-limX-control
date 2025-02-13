@@ -54,7 +54,7 @@ public:
         // 更新协方带：P = F * P * F^T + Q
         Eigen::Matrix3f F = Eigen::Matrix3f::Identity(); // 状态转移矩阵
         P = F * P * F.transpose() + Q;
-    }
+    }  
 
     // 状态更新，基于关节规则
     void update(const RobotStateConstPtr& robot_state, int leg) {
