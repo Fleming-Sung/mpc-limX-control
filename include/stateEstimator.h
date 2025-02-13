@@ -329,6 +329,7 @@ vector_t stateEstimator::update(const ros::Time& time, const ros::Duration& peri
     p_.block(0, 0, 2, 2) /= 10.;
   }
 
+  std::cout<<"xHat_:"<<xHat_<<std::endl;
 
   updateLinear(xHat_.segment<3>(0), xHat_.segment<3>(3));
 

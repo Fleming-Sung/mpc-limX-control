@@ -11,6 +11,7 @@
 #include "pf_controller_base.h" // Include header file for PFControllerBase class
 #include "stateEstimator.h" // Include for stateEstimator class
 #include <ocs2_centroidal_model/CentroidalModelRbdConversions.h>
+#include <ros/ros.h>
 
 // Class for controlling movement of multiple joints simultaneously inheriting from PFControllerBase
 class PFGroupJointMove : public PFControllerBase
@@ -47,6 +48,8 @@ public:
     eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfacePtr_, pinocchioMapping, 
                                                                         contactNames3DoF);
     setupStateEstimate();
+
+    std::cout << "success init...\n";
     
 
 
@@ -111,19 +114,19 @@ public:
   void updateStateEstimation(const ros::Time& time, const ros::Duration& period)
   {
       // state estimate
-    vector_t jointPos, jointVel;
+    vector_t jointPos(6), jointVel(6);
     contact_flag_t contacts;
     Eigen::Quaternion<scalar_t> quat;
     contact_flag_t contactFlag = {true, true};
     vector3_t angularVel, linearAccel;
     matrix3_t orientationCovariance, angularVelCovariance, linearAccelCovariance;
 
+
     // joint 
-    for (int i = 0; i < 3; ++i) {
+    for (int i = 0; i < 6; ++i) {
       jointPos(i) = robot_state_.q[i];
       jointVel(i) = robot_state_.dq[i];
     }
-
     // quat
     for (int i = 0; i < 4; ++i) {
       quat.coeffs()(i) = imu_data_.quat[i];
@@ -141,6 +144,7 @@ public:
     stateEstimate_->updateContact(contactFlag);
     stateEstimate_->updateImu(quat, angularVel, linearAccel, orientationCovariance, angularVelCovariance, linearAccelCovariance);
     measuredRbdState_ = stateEstimate_->update(time, period);
+
   }
   /******************************************************************************************************/
   /******************************************************************************************************/
@@ -177,7 +181,7 @@ private:
   std::shared_ptr<PinocchioEndEffectorKinematics> eeKinematicsPtr_;
   // 额外变量定义
   std::string urdfFile_ = "/home/george/code/limx_ws/src/robot-description/pointfoot/PF_TRON1A/urdf/robot.urdf";
-  vector_t defaultJointState_;
+  vector_t defaultJointState_ = vector_t::Zero(6);
 };
 
 /**
@@ -188,6 +192,8 @@ private:
  */
 int main(int argc, char *argv[])
 {
+  ros::init(argc, argv,"pf_groupJoints_move_test");
+
   limxsdk::PointFoot *pf = limxsdk::PointFoot::getInstance(); // Obtain instance of PointFoot class
 
   std::string robot_ip = "127.0.0.1"; // Default robot IP address

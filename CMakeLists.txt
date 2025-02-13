@@ -55,12 +55,17 @@ link_directories(
 set(COMMON_SRCS
   src/pf_controller_base.cpp
 )
-set(LINK_LIBS pointfoot_sdk_lowlevel pthread)
+
+if (WIN32)
+  set(LINK_LIBS pointfoot_sdk_lowlevel shlwapi)
+else()
+  set(LINK_LIBS pointfoot_sdk_lowlevel pthread)
+endif()
 
 add_executable(pf_groupJoints_move_test src/pf_groupJoints_move_test.cpp ${COMMON_SRCS}) 
 # target_link_libraries(pf_groupJoints_move_test stateEstimator ${catkin_LIBRARIES} Eigen3::Eigen)
 target_link_libraries(pf_groupJoints_move_test ${catkin_LIBRARIES} ${LINK_LIBS})
-install(TARGETS pf_groupJoints_move_test DESTINATION ${EXAMPLES_BIN_INSTALL_PREFIX})
+install(TARGETS pf_groupJoints_move_test DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION})
 
 
 #     include_directories(${catkin_INCLUDE_DIRS})
