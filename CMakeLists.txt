@@ -1,18 +1,22 @@
 cmake_minimum_required(VERSION 3.5)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 project(mpc_limx_control)
 
 set(CMAKE_BUILD_TYPE "Release")
-
     
 find_package(catkin REQUIRED COMPONENTS 
     roscpp
-    pointfoot_sdk_lowlevel
     ocs2_legged_robot
     realtime_tools
     tf2_ros
-    
+    pointfoot_sdk_lowlevel
 )
+
+find_package(PkgConfig REQUIRED)
+pkg_check_modules(pinocchio REQUIRED pinocchio)
 
 find_package(Eigen3 REQUIRED)
 
@@ -20,10 +24,10 @@ catkin_package(
     INCLUDE_DIRS include
     CATKIN_DEPENDS    
     roscpp    
-    pointfoot_sdk_lowlevel
     ocs2_legged_robot
     realtime_tools
     tf2_ros
+    pointfoot_sdk_lowlevel
 )
 
 include_directories(
@@ -31,10 +35,11 @@ include_directories(
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
     ${pinocchio_INCLUDE_DIRS}
-    )
+)
     
 link_directories(
-        ${pinocchio_LIBRARY_DIRS}
+    ${pinocchio_LIBRARY_DIRS}
+    "../pointfoot-sdk-lowlevel/lib/amd64"
 )
 
 ## Declare a cpp library
@@ -50,11 +55,13 @@ link_directories(
 set(COMMON_SRCS
   src/pf_controller_base.cpp
 )
+set(LINK_LIBS pointfoot_sdk_lowlevel pthread)
 
 add_executable(pf_groupJoints_move_test src/pf_groupJoints_move_test.cpp ${COMMON_SRCS}) 
 # target_link_libraries(pf_groupJoints_move_test stateEstimator ${catkin_LIBRARIES} Eigen3::Eigen)
-target_link_libraries(pf_groupJoints_move_test ${catkin_LIBRARIES})
+target_link_libraries(pf_groupJoints_move_test ${catkin_LIBRARIES} ${LINK_LIBS})
 install(TARGETS pf_groupJoints_move_test DESTINATION ${EXAMPLES_BIN_INSTALL_PREFIX})
+
 
 #     include_directories(${catkin_INCLUDE_DIRS})
 
