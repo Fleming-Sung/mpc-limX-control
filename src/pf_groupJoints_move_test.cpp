@@ -43,8 +43,9 @@ public:
     // state estimator init
     setupModel();
     CentroidalModelPinocchioMapping pinocchioMapping(centroidalModelInfo_);
-    eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(pinocchioInterfacePtr_, pinocchioMapping,
-                                                                      contactNames3DoF);
+    // std::vector<std::string> contactNames3DoF{"contact_L_Link", "contact_R_Link"};
+    eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfacePtr_, pinocchioMapping, 
+                                                                        contactNames3DoF);
     setupStateEstimate();
     
 
@@ -157,7 +158,7 @@ public:
   }
 
   void setupStateEstimate() {
-    stateEstimate_ = std::make_shared<stateEstimator>(pinocchioInterfacePtr_,
+    stateEstimate_ = std::make_shared<stateEstimator>(*pinocchioInterfacePtr_,
                                                       centroidalModelInfo_, 
                                                       *eeKinematicsPtr_);
   }

@@ -47,9 +47,13 @@ link_directories(
 # add_executable(mpc_control src/mpc_control.cpp)
 # target_link_libraries(mpc_control ${catkin_LIBRARIES} Eigen3::Eigen)
 # install(TARGETS mpc_control DESTINATION ${EXAMPLES_BIN_INSTALL_PREFIX})
-add_executable(pf_groupJoints_move_test src/pf_groupJoints_move_test.cpp)
+set(COMMON_SRCS
+  src/pf_controller_base.cpp
+)
+
+add_executable(pf_groupJoints_move_test src/pf_groupJoints_move_test.cpp ${COMMON_SRCS}) 
 # target_link_libraries(pf_groupJoints_move_test stateEstimator ${catkin_LIBRARIES} Eigen3::Eigen)
-target_link_libraries(pf_groupJoints_move_test ${catkin_LIBRARIES} Eigen3::Eigen)
+target_link_libraries(pf_groupJoints_move_test ${catkin_LIBRARIES})
 install(TARGETS pf_groupJoints_move_test DESTINATION ${EXAMPLES_BIN_INSTALL_PREFIX})
 
 #     include_directories(${catkin_INCLUDE_DIRS})

@@ -1,29 +1,9 @@
 #ifndef STATE_ESTIMATOR_H
 #define STATE_ESTIMATOR_H
 
-#define BOOST_MPL_LIMIT_LIST_SIZE 50
-#define PINOCCHIO_BOOST_MPL_LIMIT_CONTAINER_SIZE 50
+// #define BOOST_MPL_LIMIT_LIST_SIZE 50
+// #define PINOCCHIO_BOOST_MPL_LIMIT_CONTAINER_SIZE 50
 
-
-#include <Eigen/Dense>
-#include <Eigen/StdVector>
-#include <ros/ros.h>
-#include <realtime_tools/realtime_buffer.h>
-#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
-// #include <tf2_ros/transform_broadcaster.h>
-// #include <tf2_ros/transform_listener.h>
-#include <nav_msgs/Odometry.h>
-#include <ocs2_pinocchio_interface/PinocchioEndEffectorKinematics.h>
-#include <ocs2_centroidal_model/CentroidalModelInfo.h>
-#include <ocs2_legged_robot/common/ModelSettings.h>
-#include <ocs2_legged_robot/common/Types.h>
-#include <ocs2_legged_robot/gait/MotionPhaseDefinition.h>
-#include <Eigen/Core>
-#include <array>
-#include <cmath>
-#include <realtime_tools/realtime_publisher.h>
-
-#include "limxsdk/datatypes.h"
 
 #include <pinocchio/fwd.hpp>
 
@@ -37,6 +17,26 @@
 #include <ocs2_centroidal_model/FactoryFunctions.h>
 #include <ocs2_centroidal_model/ModelHelperFunctions.h>
 
+#include <Eigen/Dense>
+#include <Eigen/StdVector>
+#include <ros/ros.h>
+#include <realtime_tools/realtime_buffer.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.h>
+#include <nav_msgs/Odometry.h>
+#include <ocs2_pinocchio_interface/PinocchioEndEffectorKinematics.h>
+#include <ocs2_centroidal_model/CentroidalModelInfo.h>
+#include <ocs2_legged_robot/common/ModelSettings.h>
+#include <ocs2_legged_robot/common/Types.h>
+#include <ocs2_legged_robot/gait/MotionPhaseDefinition.h>
+#include <Eigen/Core>
+#include <array>
+#include <cmath>
+#include <realtime_tools/realtime_publisher.h>
+
+#include "limxsdk/datatypes.h"
+
+
+
 using namespace ocs2;
 template <typename T>
 using feet_array_t = std::array<T, 4>;
@@ -49,6 +49,7 @@ using quaternion_t = Eigen::Quaternion<scalar_t>;
 struct RobotOdomState {
   double pos[3];
   double ori[3];
+  double quat[4];
   double v_pos[3];
   double v_ori[3];
 };
@@ -113,7 +114,7 @@ class stateEstimator {
  public:
   stateEstimator(ocs2::PinocchioInterface pinocchioInterface, CentroidalModelInfo info, const ocs2::PinocchioEndEffectorKinematics& eeKinematics);
 
-  Eigen::Matrix<double, Eigen::Dynamic, 1> update(const ros::Time& time, const ros::Duration& period);
+  vector_t update(const ros::Time& time, const ros::Duration& period);
 
   void loadSettings(const std::string& taskFile, bool verbose);
 
@@ -237,7 +238,7 @@ stateEstimator::stateEstimator(ocs2::PinocchioInterface pinocchioInterface,  Cen
 
 }
 
-Eigen::Matrix<double, Eigen::Dynamic, 1> stateEstimator::update(const ros::Time& time, const ros::Duration& period)
+vector_t stateEstimator::update(const ros::Time& time, const ros::Duration& period)
 {
   // (不是很理解）)
   double dt = period.toSec();
@@ -369,6 +370,39 @@ void stateEstimator::updateAngular(const vector3_t& zyx, const vector_t& angular
 void stateEstimator::updateLinear(const vector_t& pos, const vector_t& linearVel) {
   rbdState_.segment<3>(3) = pos;
   rbdState_.segment<3>(info_.generalizedCoordinatesNum + 3) = linearVel;
+}
+
+nav_msgs::Odometry stateEstimator::getOdomMsg() {
+  nav_msgs::Odometry odom;
+  odom.pose.pose.position.x = xHat_.segment<3>(0)(0);
+  odom.pose.pose.position.y = xHat_.segment<3>(0)(1);
+  odom.pose.pose.position.z = xHat_.segment<3>(0)(2);
+  odom.pose.pose.orientation.x = quat_.x();
+  odom.pose.pose.orientation.y = quat_.y();
+  odom.pose.pose.orientation.z = quat_.z();
+  odom.pose.pose.orientation.w = quat_.w();
+  odom.pose.pose.orientation.x = quat_.x();
+  for (int i = 0; i < 1; ++i) {
+    for (int j = 0; j < 1; ++j) {
+      odom.pose.covariance[i * 6 + j] = p_(i, j);
+      odom.pose.covariance[6 * (3 + i) + (3 + j)] = orientationCovariance_(i * 3 + j);
+    }
+  }
+  //  The twist in this message should be specified in the coordinate frame given by the child_frame_id: "base"
+  vector_t twist = getRotationMatrixFromZyxEulerAngles(quatToZyx(quat_)).transpose() * xHat_.segment<3>(3);
+  odom.twist.twist.linear.x = twist.x();
+  odom.twist.twist.linear.y = twist.y();
+  odom.twist.twist.linear.z = twist.z();
+  odom.twist.twist.angular.x = angularVelLocal_.x();
+  odom.twist.twist.angular.y = angularVelLocal_.y();
+  odom.twist.twist.angular.z = angularVelLocal_.z();
+  for (int i = 0; i < 1; ++i) {
+    for (int j = 0; j < 1; ++j) {
+      odom.twist.covariance[i * 6 + j] = p_.block<3, 3>(3, 3)(i, j);
+      odom.twist.covariance[6 * (3 + i) + (3 + j)] = angularVelCovariance_(i * 3 + j);
+    }
+  }
+  return odom;
 }
 
 void stateEstimator::publishMsgs(const nav_msgs::Odometry& odom) {
