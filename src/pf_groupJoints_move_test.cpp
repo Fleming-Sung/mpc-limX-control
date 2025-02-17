@@ -42,18 +42,8 @@ public:
     robotstate_on_ = false; // Initialize robot state flag
 
     // state estimator init
-    setupModel();
-    CentroidalModelPinocchioMapping pinocchioMapping(centroidalModelInfo_);
-    // std::vector<std::string> contactNames3DoF{"contact_L_Link", "contact_R_Link"};
-    eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfacePtr_, pinocchioMapping, 
-                                                                        contactNames3DoF);
     setupStateEstimate();
-
     std::cout << "success init...\n";
-    
-
-
-
     
   }
 
@@ -101,7 +91,7 @@ public:
         robotstate_on_ = false; // Reset the flag for receiving robot state data
 
         // update estimated state
-        updateStateEstimation(ros::Time::now(), ros::Duration(0.001)); // Update the state estimation
+        updateStateEstimation(ros::Time::now(), ros::Duration(0.001), robot_state_, imu_data_); // Update the state estimation
       }
       else
       {
@@ -111,7 +101,7 @@ public:
   }
 
   // Function to get the robot state
-  void updateStateEstimation(const ros::Time& time, const ros::Duration& period)
+  void updateStateEstimation(const ros::Time& time, const ros::Duration& period, limxsdk::RobotState robot_state, limxsdk::ImuData imu_data)
   {
       // state estimate
     vector_t jointPos(6), jointVel(6);
@@ -146,10 +136,10 @@ public:
     measuredRbdState_ = stateEstimate_->update(time, period);
 
   }
-  /******************************************************************************************************/
-  /******************************************************************************************************/
-  /******************************************************************************************************/
-  void setupModel() {
+
+  void setupStateEstimate() {
+
+    // setupModel
     // PinocchioInterface
     pinocchioInterfacePtr_ =
         std::make_unique<PinocchioInterface>(centroidal_model::createPinocchioInterface(urdfFile_, jointNames));
@@ -159,9 +149,11 @@ public:
         *pinocchioInterfacePtr_, CentroidalModelType::SingleRigidBodyDynamics,
         defaultJointState_, contactNames3DoF,
         contactNames6DoF);
-  }
+    
+    CentroidalModelPinocchioMapping pinocchioMapping(centroidalModelInfo_);
+    eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfacePtr_, pinocchioMapping, 
+                                                                        contactNames3DoF);
 
-  void setupStateEstimate() {
     stateEstimate_ = std::make_shared<stateEstimator>(*pinocchioInterfacePtr_,
                                                       centroidalModelInfo_, 
                                                       *eeKinematicsPtr_);
@@ -173,13 +165,14 @@ private:
   bool is_first_enter_{true};                                    // Flag for first iteration
   int running_iter_{1};                                          // Iteration count
 
+  // stateEstimator 变量
   std::unique_ptr<PinocchioInterface> pinocchioInterfacePtr_;
   CentroidalModelInfo centroidalModelInfo_;
   vector_t measuredRbdState_;
   std::shared_ptr<stateEstimator> stateEstimate_;
   std::shared_ptr<CentroidalModelRbdConversions> rbdConversions_;
   std::shared_ptr<PinocchioEndEffectorKinematics> eeKinematicsPtr_;
-  // 额外变量定义
+
   std::string urdfFile_ = "/home/george/code/limx_ws/src/robot-description/pointfoot/PF_TRON1A/urdf/robot.urdf";
   vector_t defaultJointState_ = vector_t::Zero(6);
 };
