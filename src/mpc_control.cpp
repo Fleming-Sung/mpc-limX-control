@@ -12,6 +12,9 @@
 #include "pf_controller_base.h" // Include header file for PFControllerBase class
 #include "MPCController.h"
 #include "MPCParam.h"
+#include "stateEstimator.h"
+#include <ocs2_centroidal_model/CentroidalModelRbdConversions.h>
+#include "ros/ros.h"
 
 // Class for controlling movement of multiple joints simultaneously inheriting from PFControllerBase
 class MPCWalking : public PFControllerBase
@@ -39,6 +42,11 @@ public:
     targetVel = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     targetTorque = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
     robotstate_on_ = false; // Initialize robot state flag
+
+    // state estimator init
+    setupStateEstimate();
+    std::cout << "success init...\n";
+
   }
 
   /**
@@ -89,6 +97,10 @@ public:
           running_iter_++; // Increment the iteration count
         }
         robotstate_on_ = false; // Reset the flag for receiving robot state data
+
+        // update estimated state
+        updateStateEstimation(ros::Time::now(), ros::Duration(0.001), robot_state_, imu_data_); // Update the state estimation
+
       }
       else
       {
@@ -142,6 +154,64 @@ void run()
       }
     }
   }
+  // Function to get the robot state
+  void updateStateEstimation(const ros::Time& time, const ros::Duration& period, limxsdk::RobotState robot_state, limxsdk::ImuData imu_data)
+  {
+      // state estimate
+    vector_t jointPos(6), jointVel(6);
+    contact_flag_t contacts;
+    Eigen::Quaternion<scalar_t> quat;
+    contact_flag_t contactFlag = {true, true};
+    vector3_t angularVel, linearAccel;
+    matrix3_t orientationCovariance, angularVelCovariance, linearAccelCovariance;
+
+
+    // joint 
+    for (int i = 0; i < 6; ++i) {
+      jointPos(i) = robot_state_.q[i];
+      jointVel(i) = robot_state_.dq[i];
+    }
+    // quat
+    for (int i = 0; i < 4; ++i) {
+      quat.coeffs()(i) = imu_data_.quat[i];
+    }
+    // acceleration
+    for (int i = 0; i < 3; ++i) {
+      linearAccel(i) = imu_data_.acc[i];
+    }
+    // angular velocity
+    for (int i = 0; i < 3; ++i) {
+      angularVel(i) = imu_data_.gyro[i];
+    }
+
+    stateEstimate_->updateJointStates(jointPos, jointVel);
+    stateEstimate_->updateContact(contactFlag);
+    stateEstimate_->updateImu(quat, angularVel, linearAccel, orientationCovariance, angularVelCovariance, linearAccelCovariance);
+    measuredRbdState_ = stateEstimate_->update(time, period);
+
+  }
+
+  void setupStateEstimate() {
+
+    // setupModel
+    // PinocchioInterface
+    pinocchioInterfacePtr_ =
+        std::make_unique<PinocchioInterface>(centroidal_model::createPinocchioInterface(urdfFile_, jointNames));
+
+    // CentroidalModelInfo
+    centroidalModelInfo_ = centroidal_model::createCentroidalModelInfo(
+        *pinocchioInterfacePtr_, CentroidalModelType::SingleRigidBodyDynamics,
+        defaultJointState_, contactNames3DoF,
+        contactNames6DoF);
+    
+    CentroidalModelPinocchioMapping pinocchioMapping(centroidalModelInfo_);
+    eeKinematicsPtr_ = std::make_shared<PinocchioEndEffectorKinematics>(*pinocchioInterfacePtr_, pinocchioMapping, 
+                                                                        contactNames3DoF);
+
+    stateEstimate_ = std::make_shared<stateEstimator>(*pinocchioInterfacePtr_,
+                                                      centroidalModelInfo_, 
+                                                      *eeKinematicsPtr_);
+  }
 
 private:
   std::vector<float> kp{6, 0.0}, kd{6, 0.0}, targetPos{6, 0.0}, targetVel{6, 0.0}, targetTorque{6, 0.0}; // Gains and targets
@@ -149,6 +219,18 @@ private:
   bool is_first_enter_{true};                                                                              // Flag for first iteration
   int running_iter_{1};    
   MPC mpc;
+
+  // stateEstimator 变量
+  std::unique_ptr<PinocchioInterface> pinocchioInterfacePtr_;
+  CentroidalModelInfo centroidalModelInfo_;
+  vector_t measuredRbdState_;
+  std::shared_ptr<stateEstimator> stateEstimate_;
+  std::shared_ptr<CentroidalModelRbdConversions> rbdConversions_;
+  std::shared_ptr<PinocchioEndEffectorKinematics> eeKinematicsPtr_;
+
+  std::string urdfFile_ = "src/robot-description/pointfoot/PF_P441A/urdf/robot.urdf";
+  vector_t defaultJointState_ = vector_t::Zero(6);
+
 };
 
 /**
@@ -159,6 +241,8 @@ private:
  */
 int main(int argc, char *argv[])
 {
+  ros::init(argc, argv, "mpc_limx_control"); // Initialize ROS node
+
   limxsdk::PointFoot *pf = limxsdk::PointFoot::getInstance(); // Obtain instance of PointFoot class
 
   std::string robot_ip = "127.0.0.1"; // Default robot IP address
