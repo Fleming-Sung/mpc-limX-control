@@ -3,9 +3,12 @@
 
 #include "limxsdk/datatypes.h"
 #include <cmath>
+#include <Eigen/Dense>
+#include <iostream>                     // 标准输入输出
+#include <vector>                       // 用于存储参考轨迹
 
 // 定义Vec3类型为Eigen的三维向量
-typedef Eigen::Matrix<double, 3, 1> Vec3;
+// typedef Eigen::Matrix<double, 3, 1> Vec3;
 
 struct kinematicValues {
 // Abad offset from base frame values
@@ -45,10 +48,13 @@ public:
     float swing_time = 0.5;
     float stance_time = 0.5;
 
+    float gait_height = 0.1; // 摆动腿最大抬起高度
+
     float givenErrorRate = 0.1;
 
     kinematicValues KinematicValues;
-    Vec3 static_foot_offset;    
+    Eigen::Vector3d static_foot_offset_right;
+    Eigen::Vector3d static_foot_offset_left;    
 
     bool errorTest(std::vector<float> targetPos, std::vector<float> nowPos);  
               
@@ -57,9 +63,13 @@ public:
 
 MPCParam::MPCParam(){
     // 默认状态下，baselink到地面接触点的偏移量
-    static_foot_offset << KinematicValues.abad_offset_x + KinematicValues.hip_offset_x + KinematicValues.knee_offset_x + KinematicValues.foot_offset_x + KinematicValues.contact_offset_x,
-                          KinematicValues.abad_offset_y + KinematicValues.hip_offset_y + KinematicValues.knee_offset_y + KinematicValues.foot_offset_y + KinematicValues.contact_offset_y,
-                          KinematicValues.abad_offset_z + KinematicValues.hip_offset_z + KinematicValues.knee_offset_z + KinematicValues.foot_offset_z + KinematicValues.contact_offset_z;
+    static_foot_offset_left  << KinematicValues.abad_offset_x + KinematicValues.hip_offset_x + KinematicValues.knee_offset_x + KinematicValues.foot_offset_x + KinematicValues.contact_offset_x,
+                                -KinematicValues.abad_offset_y - KinematicValues.hip_offset_y - KinematicValues.knee_offset_y + KinematicValues.foot_offset_y + KinematicValues.contact_offset_y,
+                                KinematicValues.abad_offset_z + KinematicValues.hip_offset_z + KinematicValues.knee_offset_z + KinematicValues.foot_offset_z + KinematicValues.contact_offset_z;
+
+    static_foot_offset_right << KinematicValues.abad_offset_x + KinematicValues.hip_offset_x + KinematicValues.knee_offset_x + KinematicValues.foot_offset_x + KinematicValues.contact_offset_x,
+                                KinematicValues.abad_offset_y + KinematicValues.hip_offset_y + KinematicValues.knee_offset_y + KinematicValues.foot_offset_y + KinematicValues.contact_offset_y,
+                                KinematicValues.abad_offset_z + KinematicValues.hip_offset_z + KinematicValues.knee_offset_z + KinematicValues.foot_offset_z + KinematicValues.contact_offset_z;
 }
 
 bool MPCParam::errorTest(std::vector<float> targetPos, std::vector<float> nowPos)
@@ -70,5 +80,7 @@ bool MPCParam::errorTest(std::vector<float> targetPos, std::vector<float> nowPos
     }
     return errorFlag;
 }
+
+
 
 #endif 

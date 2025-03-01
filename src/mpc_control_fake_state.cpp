@@ -12,6 +12,7 @@
  #include "pf_controller_base.h" // Include header file for PFControllerBase class
  #include "MPCController.h"
  #include "MPCParam.h"
+ #include "ros/ros.h"
  
  // Class for controlling movement of multiple joints simultaneously inheriting from PFControllerBase
  class MPCWalking : public PFControllerBase
@@ -49,7 +50,8 @@
      bool reachFlag = false;
  
      while (!reachFlag)
-     {
+     { 
+      //  pf_ -> subscribeRobotState();
        if (robotstate_on_)
        {
          auto time_point = std::chrono::steady_clock::now() + std::chrono::milliseconds(1);
@@ -64,9 +66,8 @@
            std::cout << "Moving to zero point...\n"<< std::endl;
          }
  
- 
          // Calculate the interpolation ratio
-         r = std::min(std::max(double(running_iter_) / 5000.0, 0.0), 1.0);
+         r = std::min(std::max(double(running_iter_) / 2000.0, 0.0), 1.0);
  
          // Calculate the desired joint positions using linear interpolation
          for (int i = 0; i < getNumofJoint(); ++i)
@@ -76,7 +77,7 @@
  
          // Control the joints using PID controllers
          groupJointController(kp, kd, jointPos, targetVel, targetTorque);
-         // std::cout << "now q:\t" << robot_state_.q[0] << robot_state_.q[1] << robot_state_.q[2] << robot_state_.q[3] << robot_state_.q[4] << robot_state_.q[5] << std::endl;
+         std::cout << "now q:\t" << robot_state_.q[0] << robot_state_.q[1] << robot_state_.q[2] << robot_state_.q[3] << robot_state_.q[4] << robot_state_.q[5] << std::endl;
  
          // Check if reached the zero point with given error.
          reachFlag = mpc.param.errorTest(targetPos, robot_state_.q);
@@ -92,7 +93,9 @@
        }
        else
        {
-         std::this_thread::sleep_for(std::chrono::seconds(1)); // Sleep for a short duration if robot state data is not received
+         //  std::this_thread::sleep_for(std::chrono::seconds(1)); // Sleep for a short duration if robot state data is not received
+         usleep(1);
+         std::cout << "Waiting for robot state data..." << std::endl;
        }
      }
      std::cout << "Moved to zero point within accuracy of:\t" << mpc.param.givenErrorRate << std::endl;
@@ -104,9 +107,9 @@
     */
  void run()
    {
-     for (int i=0;i<6;i++){
-       robot_cmd_.mode[i] = 0; // mode 0 for torque control 
-     }
+    //  for (int i=0;i<6;i++){
+    //    robot_cmd_.mode[i] = 0; // mode 0 for torque control 
+    //  }
      
      // if TODO, begin MPC walking.
      auto init_time_point = std::chrono::steady_clock::now();
@@ -114,12 +117,12 @@
      {
        if (robotstate_on_)
        {
-         std::cout << "MPC is running..." <<< std::endl;
+         std::cout << "MPC is running..." << std::endl;
  
-         auto time_point = init_time_point + std::chrono::milliseconds(mpc.param.milliseconds_per_step); // 将控制频率设定为mpc.param.milliseconds_per_step
+         auto time_point = std::chrono::steady_clock::now() + std::chrono::milliseconds(mpc.param.milliseconds_per_step); // 将控制频率设定为mpc.param.milliseconds_per_step
  
          // begin MPC compute...
-         // mpc.run(robot_state_, imu_data_, robot_cmd_, running_iter_); // compute dest torque in robot_cmd.
+         mpc.run(robot_state_, imu_data_, robot_cmd_, running_iter_); // compute dest torque in robot_cmd.
  
          // std::cout << robot_state_ << std::endl;
  
@@ -137,8 +140,10 @@
        }
        else
        {
-         std::this_thread::sleep_for(std::chrono::seconds(1)); // Sleep for a short duration if robot state data is not received
+         //  std::this_thread::sleep_for(std::chrono::seconds(1)); // Sleep for a short duration if robot state data is not received
+         usleep(1);
          init_time_point += std::chrono::seconds(1);
+         std::cout << "Waiting for robot state data..." << std::endl;
        }
      }
    }

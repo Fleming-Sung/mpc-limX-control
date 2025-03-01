@@ -1,12 +1,15 @@
 cmake_minimum_required(VERSION 3.5)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
+# set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
+# set the C++ compiler to use O3
+# set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
 
 project(mpc_limx_control)
 
 set(CMAKE_BUILD_TYPE "Release")
 
+# find_package(mpc++ CONFIG REQUIRED)
     
 find_package(catkin REQUIRED COMPONENTS 
     roscpp
@@ -22,7 +25,9 @@ find_package(catkin REQUIRED COMPONENTS
 
 find_package(Eigen3 REQUIRED)
 
-# find_package(pinocchio REQUIRED)
+find_package(pinocchio REQUIRED)
+
+find_package(qpOASES REQUIRED)
 
 catkin_package(
     INCLUDE_DIRS include
@@ -42,23 +47,24 @@ include_directories(
     include
     ${catkin_INCLUDE_DIRS}
     ${EIGEN3_INCLUDE_DIR}
-    # ${PINOCCHIO_INCLUDE_DIRS}
+    ${PINOCCHIO_INCLUDE_DIRS}
+    # ${mpc++_INCLUDE_DIRS}
+    /home/fleming/workspace/qpOASES/include
     )
 
-# link_directories(
-#     ${pinocchio_LIBRARY_DIRS}
-#     "../pointfoot-sdk-lowlevel/lib/amd64"
-#     )
+link_directories(
+    "../pointfoot-sdk-lowlevel/lib/amd64"
+    )
 
-# set(COMMON_SRCS
-#   src/pf_controller_base.cpp
-# )
+set(COMMON_SRCS
+  src/pf_controller_base.cpp
+)
 
-# if (WIN32)
-#   set(LINK_LIBS pointfoot_sdk_lowlevel shlwapi)
-# else()
-#   set(LINK_LIBS pointfoot_sdk_lowlevel pthread)
-# endif()
+if (WIN32)
+  set(LINK_LIBS pointfoot_sdk_lowlevel shlwapi)
+else()
+  set(LINK_LIBS pointfoot_sdk_lowlevel pthread)
+endif()
 
 
 # # state_estimator_fake.cpp的可执行测试
@@ -79,10 +85,32 @@ install(TARGETS state_estimator_test
 )
 
 # mpc control主程序的开发过程测试
-add_executable(mpc_limx_control_fake_state src/mpc_control_fake_state.cpp)
-target_link_libraries(mpc_limx_control_fake_state ${catkin_LIBRARIES} ${PINOCCHIO_LIBRARIES})
+add_executable(mpc_limx_control_fake_state src/mpc_control_fake_state.cpp ${COMMON_SRCS})
+target_link_libraries(mpc_limx_control_fake_state ${catkin_LIBRARIES} ${PINOCCHIO_LIBRARIES} ${LINK_LIBS})
 # 安装可执行文件
 install(TARGETS mpc_limx_control_fake_state
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# pinocchio_test.cpp的可执行测试
+add_executable(pinocchio_test src/pinocchio_test.cpp)
+target_link_libraries(pinocchio_test ${catkin_LIBRARIES} ${PINOCCHIO_LIBRARIES})
+# 安装可执行文件
+install(TARGETS pinocchio_test
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# mpc++库的测试
+add_executable(mpc_test src/linear_mpc_example.cpp)
+target_link_libraries(mpc_test ${catkin_LIBRARIES} qpOASES)
+install(TARGETS mpc_test
+  RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+# 封装mpc求解器的测试
+add_executable(qp_test src/qpSolver_test.cpp src/QPSolver.cpp)
+target_link_libraries(qp_test ${catkin_LIBRARIES} qpOASES)
+install(TARGETS qp_test
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
