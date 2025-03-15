@@ -100,7 +100,7 @@ install(TARGETS pinocchio_test
   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
 )
 
-# mpc++库的测试
+# mpc库的测试
 add_executable(mpc_test src/linear_mpc_example.cpp)
 target_link_libraries(mpc_test ${catkin_LIBRARIES} qpOASES)
 install(TARGETS mpc_test

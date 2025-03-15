@@ -1,7 +1,7 @@
 #include "limxsdk/datatypes.h"
 #include "MPCParam.h"
 #include "state_estimator_fake.h"
-#include "mpcQP.h"
+// #include "mpcQP.h"
 #include "pinocchio_kinematics.h"
 #include <Eigen/Dense> // 引入Eigen库
 #include <vector>

@@ -10,7 +10,7 @@ QPSolver::QPSolver(double Ts, int N, const Eigen::MatrixXd& Ac, const Eigen::Mat
 
     // 初始状态
     xi = Eigen::Vector4d::Zero();
-    xi << 2, 0, 0, 0; // 初始位置
+    // xi << 2, 0, 0, 0; // 初始位置
     // Eigen::Vector4d xi(2, 0, 0, 0); // 初始位置
 
 

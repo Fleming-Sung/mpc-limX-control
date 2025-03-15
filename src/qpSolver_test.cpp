@@ -26,7 +26,7 @@ int main() {
     QPSolver qpSolver(Ts, N, Ac, Bc, Q, R, P, x_min, x_max, u_min, u_max);
 
     // 初始状态
-    Eigen::Vector4d xi(2, 0, 0, 0); // 初始位置(0.5,-0.5)，速度为零
+    Eigen::Vector4d xi(2, 0, 0, 0); // 初始位置(2,0)，速度为零
 
     // 参考轨迹参数
     double trajectory_radius = 2.0; // 轨迹半径
